@@ -72,6 +72,7 @@ function AdminPage() {
       setPassword("");
       await refetchAuth();
     },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to log in"),
   });
 
   if (!auth?.authenticated) {

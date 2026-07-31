@@ -35,7 +35,8 @@ export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ password: z.string().max(200) }).parse(data))
   .handler(async ({ data }) => {
     const expected = process.env.ADMIN_PASSWORD;
-    if (!expected) throw new Error("ADMIN_PASSWORD is not configured");
+    console.log("LOGIN ATTEMPT - ADMIN_PASSWORD from process.env:", expected);
+    if (!expected) throw new Error("ADMIN_PASSWORD is not configured in .env");
     if (data.password !== expected) return { ok: false as const };
     const session = await getAdminSession();
     await session.update({ admin: true });
