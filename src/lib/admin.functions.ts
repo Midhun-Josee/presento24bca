@@ -32,11 +32,10 @@ export const adminStatus = createServerFn({ method: "GET" }).handler(async () =>
 }));
 
 export const adminLogin = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ password: z.string().max(200) }).parse(data))
+  .validator((data: unknown) => z.object({ password: z.string().max(200) }).parse(data))
   .handler(async ({ data }) => {
     const expected = process.env.ADMIN_PASSWORD;
-    console.log("LOGIN ATTEMPT - ADMIN_PASSWORD from process.env:", expected);
-    if (!expected) throw new Error("ADMIN_PASSWORD is not configured in .env");
+    if (!expected) throw new Error("ADMIN_PASSWORD is not configured");
     if (data.password !== expected) return { ok: false as const };
     const session = await getAdminSession();
     await session.update({ admin: true });
@@ -52,7 +51,7 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(async () =
 export const adminData = createServerFn({ method: "GET" }).handler(async () => {
   await requireAdmin();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const [students, timetable, teachers, departments, subjects, queue, settings, history] =
+  const [students, timetable, teachers, departments, subjects, queue, settings, history, allCycles] =
     await Promise.all([
       supabaseAdmin.from("students").select("*").order("roll_no"),
       supabaseAdmin.from("timetable").select("*").order("day_of_week").order("period"),
@@ -66,6 +65,7 @@ export const adminData = createServerFn({ method: "GET" }).handler(async () => {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100),
+      supabaseAdmin.from("presentations").select("cycle"),
     ]);
   return {
     students: students.data ?? [],
@@ -75,13 +75,43 @@ export const adminData = createServerFn({ method: "GET" }).handler(async () => {
     subjects: subjects.data ?? [],
     queue: queue.data ?? [],
     history: history.data ?? [],
+    cycles: Array.from(new Set((allCycles.data ?? []).map((c) => c.cycle))).sort(
+      (a, b) => b - a,
+    ),
     cycle: Number(settings.data?.find((s) => s.key === "current_cycle")?.value ?? "1"),
     forcedRoll: settings.data?.find((s) => s.key === "forced_roll")?.value ?? "",
   };
 });
 
+export const cycleReport = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({ cycle: z.number().int().min(1).max(1000) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [presentations, students] = await Promise.all([
+      supabaseAdmin
+        .from("presentations")
+        .select("*")
+        .eq("cycle", data.cycle)
+        .order("presented_on")
+        .order("created_at"),
+      supabaseAdmin.from("students").select("roll_no, name, topic").order("roll_no"),
+    ]);
+    const rows = presentations.data ?? [];
+    const presentedRolls = new Set(
+      rows.filter((r) => r.kind === "original").map((r) => r.roll_no),
+    );
+    return {
+      cycle: data.cycle,
+      rows,
+      pending: (students.data ?? []).filter((s) => !presentedRolls.has(s.roll_no)),
+    };
+  });
+
 export const importStudents = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({ replace: z.boolean(), rows: z.array(studentSchema).min(1).max(500) })
       .parse(data),
@@ -100,7 +130,7 @@ export const importStudents = createServerFn({ method: "POST" })
   });
 
 export const saveStudent = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => studentSchema.parse(data))
+  .validator((data: unknown) => studentSchema.parse(data))
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -112,7 +142,7 @@ export const saveStudent = createServerFn({ method: "POST" })
   });
 
 export const deleteRow = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         table: z.enum(["students", "timetable", "teachers", "departments", "subjects", "repeat_queue"]),
@@ -129,7 +159,7 @@ export const deleteRow = createServerFn({ method: "POST" })
   });
 
 export const saveTimetableEntry = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => timetableSchema.parse(data))
+  .validator((data: unknown) => timetableSchema.parse(data))
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -139,29 +169,29 @@ export const saveTimetableEntry = createServerFn({ method: "POST" })
   });
 
 export const saveNamed = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => namedSchema.parse(data))
+  .validator((data: unknown) => namedSchema.parse(data))
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const error =
       data.table === "teachers"
         ? (await supabaseAdmin
-            .from("teachers")
-            .insert({ name: data.name, department: data.extra })).error
+          .from("teachers")
+          .insert({ name: data.name, department: data.extra })).error
         : data.table === "departments"
           ? (await supabaseAdmin
-              .from("departments")
-              .insert({ name: data.name, code: data.extra })).error
+            .from("departments")
+            .insert({ name: data.name, code: data.extra })).error
           : (await supabaseAdmin
-              .from("subjects")
-              .insert({ name: data.name, code: data.extra })).error;
+            .from("subjects")
+            .insert({ name: data.name, code: data.extra })).error;
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 
 export const setForcedRoll = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ roll_no: z.number().int().min(0).max(200) }).parse(data),
   )
   .handler(async ({ data }) => {
@@ -174,7 +204,7 @@ export const setForcedRoll = createServerFn({ method: "POST" })
   });
 
 export const resetCycle = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ mode: z.enum(["restart", "next"]) }).parse(data),
   )
   .handler(async ({ data }) => {
