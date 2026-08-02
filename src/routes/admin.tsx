@@ -663,7 +663,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </Panel>
         </TabsContent>
       </Tabs>
-      <Footer />
     </main>
   );
 }
