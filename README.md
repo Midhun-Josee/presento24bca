@@ -60,10 +60,6 @@ The Admin Panel should have its own route and login page.
 
 Use an environment variable for the admin password.
 
-Default password:
-
-15884
-
 ---
 
 # DESIGN STYLE
@@ -376,8 +372,6 @@ Administrators can
 
 - Reset presentation cycles
 
-- Force the next roll number
-
 - Update or replace the Excel file
 
 - Configure period timings
@@ -510,47 +504,3 @@ Support
 
 - Presentation history
 
----
-
-# CODING STYLE
-
-- Write clean, modular and reusable code.
-
-- Use TypeScript best practices.
-
-- Keep the folder structure organised.
-
-- Avoid unnecessary dependencies.
-
-- Focus on maintainability.
-
----
-
-# IMPORTANT
-
-Build a simple, focused application that solves one problem well.
-
-Do not add extra features beyond the requirements.
-
-The application should feel like real internal software developed specifically for a college, not a generic AI-generated project.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/27d8d13d-f637-4946-9cee-117d144173bc).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
