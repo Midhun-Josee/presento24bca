@@ -74,11 +74,11 @@ export function PresentationWheel({
               "absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-xs font-medium tabular-nums transition-all duration-300",
               state === "available" && "border-border bg-card text-foreground",
               state === "presented" &&
-                "border-border bg-muted text-muted-foreground line-through opacity-60",
+              "border-border bg-muted text-muted-foreground line-through opacity-60",
               state === "absent" &&
-                "border-destructive/30 bg-destructive/10 text-destructive line-through opacity-70",
+              "border-destructive/30 bg-destructive/10 text-destructive line-through opacity-70",
               state === "selected" &&
-                "scale-125 border-primary bg-primary text-primary-foreground shadow-md",
+              "scale-125 border-primary bg-primary text-primary-foreground shadow-md",
               spinning && "opacity-70",
             )}
             style={{
