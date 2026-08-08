@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { CalendarDays, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Footer } from "@/components/Footer";
 import { SessionMeta } from "@/components/SessionMeta";
 import { getSessionData } from "@/lib/presento.functions";
 import {
@@ -138,7 +137,6 @@ function Home() {
       <div className="mt-auto pt-10 text-xs text-muted-foreground">
         Cycle {data?.cycle ?? 1} · {data?.students.length ?? 0} students on the roster
       </div>
-      <Footer />
     </main>
   );
 }
