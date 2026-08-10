@@ -57,6 +57,7 @@ export type Database = {
         Row: {
           created_at: string
           cycle: number
+          duration_seconds: number | null
           id: string
           kind: string
           needs_repeat: boolean
@@ -64,6 +65,7 @@ export type Database = {
           presented_on: string
           rating: number | null
           review: string | null
+          review_grade: string | null
           roll_no: number
           student_name: string
           subject: string | null
@@ -73,6 +75,7 @@ export type Database = {
         Insert: {
           created_at?: string
           cycle?: number
+          duration_seconds?: number | null
           id?: string
           kind?: string
           needs_repeat?: boolean
@@ -80,6 +83,7 @@ export type Database = {
           presented_on?: string
           rating?: number | null
           review?: string | null
+          review_grade?: string | null
           roll_no: number
           student_name: string
           subject?: string | null
@@ -89,6 +93,7 @@ export type Database = {
         Update: {
           created_at?: string
           cycle?: number
+          duration_seconds?: number | null
           id?: string
           kind?: string
           needs_repeat?: boolean
@@ -96,6 +101,7 @@ export type Database = {
           presented_on?: string
           rating?: number | null
           review?: string | null
+          review_grade?: string | null
           roll_no?: number
           student_name?: string
           subject?: string | null
@@ -134,6 +140,7 @@ export type Database = {
           id: string
           name: string
           photo_url: string | null
+          pick_weight: number
           roll_no: number
           topic: string | null
         }
@@ -142,6 +149,7 @@ export type Database = {
           id?: string
           name: string
           photo_url?: string | null
+          pick_weight?: number
           roll_no: number
           topic?: string | null
         }
@@ -150,6 +158,7 @@ export type Database = {
           id?: string
           name?: string
           photo_url?: string | null
+          pick_weight?: number
           roll_no?: number
           topic?: string | null
         }
