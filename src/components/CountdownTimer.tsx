@@ -15,7 +15,7 @@ export function CountdownTimer({ seconds, running, onComplete }: Props) {
       onComplete();
       return;
     }
-    const t = setTimeout(() => setLeft((v) => v - 1), 1000);
+    const t = setTimeout(() => setLeft((v) => v - 1), 750);
     return () => clearTimeout(t);
   }, [left, running, onComplete]);
 

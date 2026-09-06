@@ -2,12 +2,18 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SessionMeta } from "@/components/SessionMeta";
 import { PresentationWheel, type RollState } from "@/components/PresentationWheel";
@@ -24,7 +30,7 @@ import {
 
 import type { ReviewGrade } from "@/lib/review";
 
-import { parseAbsentRolls, resolveCurrentSession } from "@/lib/timetable";
+import { resolveCurrentSession } from "@/lib/timetable";
 
 export const Route = createFileRoute("/session")({
   head: () => ({
@@ -53,27 +59,37 @@ function RollList({
   title,
   empty,
   rows,
+  action,
 }: {
   title: string;
   empty: string;
   rows: { roll_no: number; name: string }[];
+  action?: (row: { roll_no: number; name: string }) => React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium">{title}</h2>
-        <span className="text-xs tabular-nums text-muted-foreground">{rows.length}</span>
+    <div className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="min-w-0 truncate text-sm font-medium">{title}</h2>
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {rows.length}
+        </span>
       </div>
       {rows.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">{empty}</p>
       ) : (
         <ul className="mt-3 max-h-56 space-y-1.5 overflow-auto text-sm">
           {rows.map((r) => (
-            <li key={r.roll_no} className="flex gap-2 border-b border-border pb-1.5">
-              <span className="w-7 shrink-0 tabular-nums text-muted-foreground">
-                {r.roll_no}
+            <li
+              key={r.roll_no}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border pb-1.5"
+            >
+              <span className="flex min-w-0 gap-2">
+                <span className="w-7 shrink-0 tabular-nums text-muted-foreground">
+                  {r.roll_no}
+                </span>
+                <span className="truncate">{r.name}</span>
               </span>
-              <span className="truncate">{r.name}</span>
+              {action ? <span className="shrink-0">{action(r)}</span> : null}
             </li>
           ))}
         </ul>
@@ -104,7 +120,6 @@ function SessionPage() {
   });
 
   const [stage, setStage] = useState<Stage>("absent");
-  const [absentInput, setAbsentInput] = useState("");
   const [absent, setAbsent] = useState<number[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [spinning, setSpinning] = useState(false);
@@ -126,7 +141,6 @@ function SessionPage() {
     setHydrated(true);
     if (data.absentConfirmed) {
       setAbsent(data.absent);
-      setAbsentInput(data.absent.join(", "));
       setStage("wheel");
     }
   }, [data, hydrated]);
@@ -236,6 +250,46 @@ function SessionPage() {
     onError: () => toast.error("Could not save the topic."),
   });
 
+  // Lets a teacher run a queued re-presentation immediately, skipping the wheel.
+  const presentNow = useMutation({
+    mutationFn: async (roll: number) => {
+      const student = (data?.students ?? []).find((s) => s.roll_no === roll);
+      const isRepeat = (data?.repeatQueue ?? []).includes(roll);
+      const created = await record({
+        data: {
+          roll_no: roll,
+          kind: isRepeat ? "repeat" : "original",
+          cycle: data?.cycle ?? 1,
+          subject: entry?.subject ?? null,
+          teacher: entry?.teacher ?? null,
+          period: entry?.period ?? null,
+        },
+      });
+      return {
+        id: created.id,
+        isRepeat,
+        student: {
+          roll_no: roll,
+          name: student?.name ?? `Roll ${roll}`,
+          topic: student?.topic ?? null,
+          photo_url: student?.photo_url ?? null,
+        },
+      };
+    },
+    onSuccess: (result) => {
+      setKind(result.isRepeat ? "repeat" : "original");
+      setSelected(result.student);
+      setRevealed(true);
+      setSpinning(false);
+      setPresentationId(result.id);
+      setStage("screen");
+      setTimerRunning(true);
+    },
+    onError: () => toast.error("Could not start that presentation."),
+  });
+
+
+
 
   if (!entry) {
     return (
@@ -256,7 +310,7 @@ function SessionPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <Link
         to="/"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -264,37 +318,74 @@ function SessionPage() {
         <ArrowLeft className="h-4 w-4" /> Home
       </Link>
 
-      <section className="mt-5 rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+      <section className="mt-5 rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-6">
         <SessionMeta entry={entry} now={now} overrideDay={data?.overrideDay ?? null} compact />
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
-        <aside className="space-y-6">
-          <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+      <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-[320px_1fr] lg:gap-6">
+        <aside className="space-y-5 md:order-2 lg:order-none">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
             <h2 className="text-sm font-medium">Absent roll numbers</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Enter comma-separated roll numbers, e.g. 4, 8, 17, 29
+              Pick each absent roll number from the list.
             </p>
             <div className="mt-3 space-y-3">
-              <Label htmlFor="absent" className="sr-only">
+              <Label htmlFor="absent-select" className="sr-only">
                 Absent roll numbers
               </Label>
-              <Input
-                id="absent"
-                value={absentInput}
-                maxLength={300}
+              <Select
+                value=""
                 disabled={stage !== "absent"}
-                onChange={(e) => setAbsentInput(e.target.value)}
-                placeholder="4, 8, 17, 29"
-              />
+                onValueChange={(v) => {
+                  const roll = Number(v);
+                  setAbsent((prev) =>
+                    prev.includes(roll) ? prev : [...prev, roll].sort((a, b) => a - b),
+                  );
+                }}
+              >
+                <SelectTrigger id="absent-select" className="w-full">
+                  <SelectValue placeholder="Select a roll number" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {rolls
+                    .filter((r) => !absent.includes(r))
+                    .map((r) => {
+                      const s = (data?.students ?? []).find((x) => x.roll_no === r);
+                      return (
+                        <SelectItem key={r} value={String(r)}>
+                          {r} — {s?.name ?? "Student"}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+
+              {absent.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {absent.map((r) => (
+                    <li key={r}>
+                      <button
+                        type="button"
+                        disabled={stage !== "absent"}
+                        onClick={() => setAbsent((prev) => prev.filter((x) => x !== r))}
+                        className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium tabular-nums text-destructive disabled:opacity-60"
+                      >
+                        {r}
+                        {stage === "absent" ? <X className="h-3 w-3" /> : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">Nobody marked absent yet.</p>
+              )}
+
               {stage === "absent" ? (
                 <Button
                   className="w-full"
                   onClick={() => {
-                    const parsed = parseAbsentRolls(absentInput, Math.max(...rolls, 55));
-                    setAbsent(parsed);
                     setStage("wheel");
-                    void persistAbsent({ data: { absent: parsed } });
+                    void persistAbsent({ data: { absent } });
                   }}
                 >
                   Confirm absentees
@@ -312,7 +403,7 @@ function SessionPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
             <dl className="space-y-3 text-sm">
               <div className="flex items-baseline justify-between">
                 <dt className="text-muted-foreground">Remaining students</dt>
@@ -339,10 +430,26 @@ function SessionPage() {
             title="Re-presentations"
             empty="No student is marked for re-presentation."
             rows={data?.repeatStudents ?? []}
+            action={(row) => (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                disabled={
+                  stage !== "wheel" ||
+                  spinning ||
+                  presentNow.isPending ||
+                  absent.includes(row.roll_no)
+                }
+                onClick={() => presentNow.mutate(row.roll_no)}
+              >
+                Present now
+              </Button>
+            )}
           />
         </aside>
 
-        <section className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+        <section className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-6 md:order-1 lg:order-none">
           {stage === "absent" ? (
             <p className="py-24 text-center text-sm text-muted-foreground">
               Confirm the absent roll numbers to enable the presentation wheel.

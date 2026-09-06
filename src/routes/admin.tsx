@@ -6,6 +6,7 @@ import { Download, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -436,7 +437,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Presento Admin</h1>
@@ -455,7 +456,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <Tabs defaultValue="students" className="mt-6">
-        <TabsList className="flex-wrap">
+        <TabsList className="flex w-full flex-wrap justify-start gap-1 h-auto">
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="timetable">Timetable</TabsTrigger>
           <TabsTrigger value="master">Master data</TabsTrigger>
@@ -518,7 +519,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
           <Panel title="Roster">
             <div className="max-h-[26rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[34rem] text-sm">
                 <thead className="sticky top-0 bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="py-2">Roll</th>
@@ -678,7 +679,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
           <Panel title="Weekly timetable">
             <div className="max-h-[26rem] overflow-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[34rem] text-sm">
                 <thead className="sticky top-0 bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="py-2">Day</th>
@@ -1136,6 +1137,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         </TabsContent>
       </Tabs>
+      <Footer />
     </main>
   );
 }

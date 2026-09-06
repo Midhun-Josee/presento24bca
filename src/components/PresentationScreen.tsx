@@ -58,11 +58,11 @@ export function PresentationScreen({
   };
 
   const btn =
-    "inline-flex items-center gap-2 rounded-lg border-2 border-border px-6 py-3 text-lg font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-35";
+    "inline-flex items-center gap-2 rounded-lg border-2 border-border px-4 py-2.5 text-base font-medium sm:px-6 sm:py-3 sm:text-lg text-foreground transition-colors hover:bg-muted disabled:opacity-35";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-card">
-      <header className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 border-b border-border px-6 py-3 text-center text-base text-muted-foreground sm:px-10">
+      <header className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-b border-border px-4 py-2.5 text-center text-sm sm:px-6 sm:py-3 sm:text-base text-muted-foreground sm:px-10">
         <span className="font-medium text-foreground">{subject}</span>
         <span>{teacher}</span>
         <span>Period {period}</span>
@@ -71,7 +71,7 @@ export function PresentationScreen({
         </span>
       </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-6 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 text-center">
         <div className="flex max-w-4xl flex-col items-center gap-3 text-center">
           {isRepeat && (
             <span className="rounded-full bg-accent/15 px-3 py-1 text-sm font-medium uppercase tracking-wide text-accent">
@@ -144,8 +144,8 @@ export function PresentationScreen({
       </div>
 
       {/* Timer controls pinned to the bottom of the screen so they stay visible on a TV. */}
-      <div className="border-t-2 border-border bg-background px-6 py-5">
-        <div className="flex flex-wrap items-center justify-center gap-4">
+      <div className="border-t-2 border-border bg-background px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
           {!started || paused ? (
             <button
               onClick={() => {
@@ -166,7 +166,7 @@ export function PresentationScreen({
           </button>
           <button
             onClick={() => onComplete(elapsed.current)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-lg font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:px-8 sm:py-3 sm:text-lg"
           >
             <CheckCircle2 className="h-5 w-5" /> Finish &amp; review
           </button>
