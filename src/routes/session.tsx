@@ -2,18 +2,10 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SessionMeta } from "@/components/SessionMeta";
 import { PresentationWheel, type RollState } from "@/components/PresentationWheel";
@@ -94,6 +86,70 @@ function RollList({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function AbsenteeGrid({
+  rolls,
+  students,
+  absent,
+  presented,
+  repeat,
+  disabled,
+  onToggle,
+}: {
+  rolls: number[];
+  students: { roll_no: number; name: string }[];
+  absent: number[];
+  presented: Set<number>;
+  repeat: Set<number>;
+  disabled: boolean;
+  onToggle: (roll: number) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Absent roll numbers"
+      className="grid max-h-64 grid-cols-6 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-8 lg:grid-cols-10"
+    >
+      {rolls.map((r) => {
+        const isAbsent = absent.includes(r);
+        const hasPresented = presented.has(r);
+        const needsRepeat = repeat.has(r);
+        // Students who already presented cannot be added to the absent list.
+        const locked = hasPresented && !needsRepeat && !isAbsent;
+        const student = students.find((s) => s.roll_no === r);
+        const note = isAbsent
+          ? " · marked absent"
+          : hasPresented
+            ? needsRepeat
+              ? " · already presented, re-presentation pending"
+              : " · already presented"
+            : "";
+        return (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={isAbsent}
+            disabled={disabled || locked}
+            title={student ? `${r} — ${student.name}${note}` : `${r}${note}`}
+            onClick={() => onToggle(r)}
+            className={
+              "inline-flex h-9 items-center justify-center rounded-md border text-xs font-medium tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-60 " +
+              (isAbsent
+                ? "border-destructive/60 bg-destructive/15 text-destructive"
+                : locked
+                  ? "border-border bg-muted text-muted-foreground line-through opacity-60"
+                  : needsRepeat
+                    ? "border-accent/50 bg-accent/10 text-foreground hover:border-accent"
+                    : "border-border bg-background text-foreground hover:border-primary/40 hover:bg-primary/10")
+            }
+          >
+            {r}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -327,58 +383,50 @@ function SessionPage() {
           <div className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
             <h2 className="text-sm font-medium">Absent roll numbers</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Pick each absent roll number from the list.
+              Tap the roll numbers of students who are absent today. Anyone who
+              has already presented is struck out and cannot be marked absent.
             </p>
             <div className="mt-3 space-y-3">
-              <Label htmlFor="absent-select" className="sr-only">
-                Absent roll numbers
-              </Label>
-              <Select
-                value=""
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Tap a roll number to mark it absent; tap again to undo.
+                </p>
+                {absent.length > 0 ? (
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {absent.length} marked
+                  </span>
+                ) : null}
+              </div>
+              <AbsenteeGrid
+                rolls={rolls}
+                students={data?.students ?? []}
+                absent={absent}
+                presented={presented}
+                repeat={repeatRolls}
                 disabled={stage !== "absent"}
-                onValueChange={(v) => {
-                  const roll = Number(v);
+                onToggle={(roll) =>
                   setAbsent((prev) =>
-                    prev.includes(roll) ? prev : [...prev, roll].sort((a, b) => a - b),
-                  );
-                }}
-              >
-                <SelectTrigger id="absent-select" className="w-full">
-                  <SelectValue placeholder="Select a roll number" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {rolls
-                    .filter((r) => !absent.includes(r))
-                    .map((r) => {
-                      const s = (data?.students ?? []).find((x) => x.roll_no === r);
-                      return (
-                        <SelectItem key={r} value={String(r)}>
-                          {r} — {s?.name ?? "Student"}
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
+                    prev.includes(roll)
+                      ? prev.filter((x) => x !== roll)
+                      : [...prev, roll].sort((a, b) => a - b),
+                  )
+                }
+              />
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-sm border border-destructive/60 bg-destructive/15" />
+                  marked absent
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 shrink-0 border border-border bg-muted" />
+                  already presented ({presented.size})
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-sm border border-accent/50 bg-accent/10" />
+                  needs re-presentation
+                </span>
+              </div>
 
-              {absent.length > 0 ? (
-                <ul className="flex flex-wrap gap-2">
-                  {absent.map((r) => (
-                    <li key={r}>
-                      <button
-                        type="button"
-                        disabled={stage !== "absent"}
-                        onClick={() => setAbsent((prev) => prev.filter((x) => x !== r))}
-                        className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium tabular-nums text-destructive disabled:opacity-60"
-                      >
-                        {r}
-                        {stage === "absent" ? <X className="h-3 w-3" /> : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-muted-foreground">Nobody marked absent yet.</p>
-              )}
 
               {stage === "absent" ? (
                 <Button
@@ -518,12 +566,27 @@ function SessionPage() {
             <DialogTitle>Presentation review</DialogTitle>
           </DialogHeader>
           {selected && (
-            <ReviewForm
-              studentName={selected.name}
-              rollNo={selected.roll_no}
-              submitting={saveReview.isPending}
-              onSubmit={(value) => saveReview.mutate(value)}
-            />
+            <>
+              <ReviewForm
+                studentName={selected.name}
+                rollNo={selected.roll_no}
+                submitting={saveReview.isPending}
+                onSubmit={(value) => saveReview.mutate(value)}
+              />
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={saveReview.isPending}
+                onClick={() => {
+                  setDurationSeconds(0);
+                  setTimerRunning(true);
+                  setStage("screen");
+                }}
+              >
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                Back to timer — restart {selected.name}
+              </Button>
+            </>
           )}
         </DialogContent>
       </Dialog>
